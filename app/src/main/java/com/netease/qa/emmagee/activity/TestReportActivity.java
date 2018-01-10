@@ -16,17 +16,16 @@
  */
 package com.netease.qa.emmagee.activity;
 
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-
-import org.apache.commons.io.FileUtils;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 
 import com.netease.qa.emmagee.R;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -74,9 +73,19 @@ public class TestReportActivity extends Activity {
 
 		Intent intent = getIntent();
 		String csvPath = intent.getStringExtra(TestListActivity.CSV_PATH_KEY);
-		
+
+		InputStreamReader isr = null;
+		char[] buffer = new char[8192];
+
+		StringBuilder sb = new StringBuilder();
+		int length;
 		try {
-			String content = FileUtils.readFileToString(new File(csvPath), "gbk");
+			isr = new InputStreamReader(new FileInputStream(csvPath), Charset.forName("gbk"));
+			while((length = isr.read(buffer))!=-1){
+				sb.append(buffer, 0, length);
+			}
+			String content = sb.toString();
+
 			String[] lines = content.split("\r\n");
 			int index = 0;
 			for (String line: lines) {
@@ -85,6 +94,14 @@ public class TestReportActivity extends Activity {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			if (isr != null){
+				try {
+					isr.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		
 	}
