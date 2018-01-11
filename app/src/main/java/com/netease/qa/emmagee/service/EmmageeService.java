@@ -292,9 +292,9 @@ public class EmmageeService extends Service {
 			String totalMemory = fomart.format((double) totalMemorySize / 1024);
 			String multiCpuTitle = BLANK_STRING;
 			// titles of multiple cpu cores
-			ArrayList<String> cpuList = cpuInfo.getCpuList();
-			for (int i = 0; i < cpuList.size(); i++) {
-				multiCpuTitle += Constants.COMMA + cpuList.get(i)
+			String[] cpuList = cpuInfo.getCpuList();
+			for (int i = 0; i < cpuList.length; i++) {
+				multiCpuTitle += Constants.COMMA + cpuList[i]
 						+ getString(R.string.total_usage);
 			}
 			bw.write(getString(R.string.process_package) + Constants.COMMA

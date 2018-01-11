@@ -16,11 +16,18 @@
  */
 package com.netease.qa.emmagee.utils;
 
+import com.netease.qa.emmagee.R;
+import com.netease.qa.emmagee.service.EmmageeService;
+
+import android.content.Context;
+import android.os.Build;
+import android.util.Log;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
@@ -28,13 +35,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Pattern;
-
-import com.netease.qa.emmagee.R;
-import com.netease.qa.emmagee.service.EmmageeService;
-
-import android.content.Context;
-import android.os.Build;
-import android.util.Log;
 
 /**
  * operate CPU information
@@ -91,16 +91,9 @@ public class CpuInfo {
 		String cpuStatPath = "/proc/" + processPid + "/stat";
 		try {
 			// monitor cpu stat of certain process
-			RandomAccessFile processCpuInfo = new RandomAccessFile(cpuStatPath, "r");
-			String line = "";
-			StringBuffer stringBuffer = new StringBuffer();
-			stringBuffer.setLength(0);
-			while ((line = processCpuInfo.readLine()) != null) {
-				stringBuffer.append(line + "\n");
-			}
-			String[] tok = stringBuffer.toString().split(" ");
+			String content = FileUtils.readFile(cpuStatPath);
+			String[] tok = content.split(" ");
 			processCpu = Long.parseLong(tok[13]) + Long.parseLong(tok[14]);
-			processCpuInfo.close();
 		} catch (FileNotFoundException e) {
 			Log.w(LOG_TAG, "FileNotFoundException: " + e.getMessage());
 		} catch (IOException e) {
@@ -115,15 +108,15 @@ public class CpuInfo {
 	private void readTotalCpuStat() {
 		try {
 			// monitor total and idle cpu stat of certain process
-			RandomAccessFile cpuInfo = new RandomAccessFile(CPU_STAT, "r");
-			String line = "";
-			while ((null != (line = cpuInfo.readLine())) && line.startsWith("cpu")) {
+			String content = FileUtils.readFile(CPU_STAT);
+			String[] lines = content.split("\\n");
+			for (int i = 0; i < lines.length; i++) {
+				String line = lines[i];
 				String[] toks = line.split("\\s+");
 				idleCpu.add(Long.parseLong(toks[4]));
 				totalCpu.add(Long.parseLong(toks[1]) + Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[4])
 						+ Long.parseLong(toks[6]) + Long.parseLong(toks[5]) + Long.parseLong(toks[7]));
 			}
-			cpuInfo.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -138,14 +131,13 @@ public class CpuInfo {
 	 */
 	public String getCpuName() {
 		try {
-			RandomAccessFile cpuStat = new RandomAccessFile(CPU_INFO_PATH, "r");
 			// check cpu type
-			String line;
-			while (null != (line = cpuStat.readLine())) {
+			String content = FileUtils.readFile(CPU_INFO_PATH);
+			String[] lines = content.split("\\n");
+			for (String line : lines) {
 				String[] values = line.split(":");
 				if (values[0].contains(INTEL_CPU_NAME) || values[0].contains("Processor")) {
-					cpuStat.close();
-					Log.d(LOG_TAG, "CPU name="+values[1]);
+					Log.d(LOG_TAG, "CPU name=" + values[1]);
 					return values[1];
 				}
 			}
@@ -160,11 +152,11 @@ public class CpuInfo {
 	 * 
 	 * @author andrewleo
 	 */
-	class CpuFilter implements FileFilter {
+	class CpuFilter implements FilenameFilter {
 		@Override
-		public boolean accept(File pathname) {
+		public boolean accept(File dir, String filename) {
 			// Check if filename matchs "cpu[0-9]"
-			if (Pattern.matches("cpu[0-9]", pathname.getName())) {
+			if (Pattern.matches("cpu[0-9]", filename)) {
 				return true;
 			}
 			return false;
@@ -181,7 +173,7 @@ public class CpuInfo {
 			// Get directory containing CPU info
 			File dir = new File(CPU_DIR_PATH);
 			// Filter to only list the devices we care about
-			File[] files = dir.listFiles(new CpuFilter());
+			String[] files = dir.list(new CpuFilter());
 			return files.length;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -194,21 +186,15 @@ public class CpuInfo {
 	 * 
 	 * @return cpu core list
 	 */
-	public ArrayList<String> getCpuList() {
-		ArrayList<String> cpuList = new ArrayList<String>();
+	public String[] getCpuList() {
 		try {
 			// Get directory containing CPU info
 			File dir = new File(CPU_DIR_PATH);
 			// Filter to only list the devices we care about
-			File[] files = dir.listFiles(new CpuFilter());
-			for (int i = 0; i < files.length; i++) {
-				cpuList.add(files[i].getName());
-			}
-			return cpuList;
+			return dir.list(new CpuFilter());
 		} catch (Exception e) {
 			e.printStackTrace();
-			cpuList.add("cpu0");
-			return cpuList;
+			return new String[]{"cpu0"};
 		}
 	}
 
